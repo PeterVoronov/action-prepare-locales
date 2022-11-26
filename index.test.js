@@ -17,7 +17,8 @@ test('wait 500 ms', async () => {
 
 // shows how the runner will run a javascript action with env / stdout protocol
 test('test runs', () => {
-  process.env['INPUT_MILLISECONDS'] = 100;
+  process.env['FOLDER_WITH_SIMPLE_JSONS'] = path.join('test', 'source');
+  process.env['FOLDER_WITH_CORE_TRANSLATIONS'] = path.join('test', 'locales');
   const ip = path.join(__dirname, 'index.js');
   const result = cp.execSync(`node ${ip}`, {env: process.env}).toString();
   console.log(result);

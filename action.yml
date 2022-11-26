@@ -1,13 +1,14 @@
-name: 'Wait'
-description: 'Wait a designated number of milliseconds'
+name: 'Transform translations for the ATM'
+description: 'Transform a common translation JSON files to the ATM JSON format.'
 inputs:
-  milliseconds:  # id of input
-    description: 'number of milliseconds to wait'
+  folder_with_simple_jsons:  # id of input
+    description: 'The folder with input translation files'
     required: true
-    default: '1000'
-outputs:
-  time: # output will be available to future steps
-    description: 'The current time after waiting'
+    default: 'locales/source'
+  folder_with_core_translations:  # id of input
+    description: 'The folder with results of conversion translation files'
+    required: true
+    default: 'locales'
 runs:
   using: 'node16'
   main: 'dist/index.js'
