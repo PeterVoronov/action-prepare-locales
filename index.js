@@ -1,7 +1,7 @@
 const core = require('@actions/core');
-const path = require('path')
-const git = require('isomorphic-git')
-const fs = require('fs')
+const path = require('path');
+const git = require('isomorphic-git');
+const fs = require('fs');
 
 
 // most @actions toolkit packages have async methods
@@ -22,13 +22,64 @@ async function run() {
     console.log(`folderOfCoreTranslations ${folderWithCoreTranslations}!`);
 
     const 
-      sourcesPath = path.join(process.cwd(),  ...folderWithSimpleJSONs.split('/')),
-      sourcesArray = fs.readdirSync(sourcesPath, {withFileTypes: true})
+      translationSimpleRegExp = new RegExp(/^core_([^._]+)[^.]*\.json$/),
+      translationSimpleFilesPath = path.join(process.cwd(),  ...folderWithSimpleJSONs.split('/')),
+      translationCoreFilesPath = path.join(process.cwd(),  ...folderWithCoreTranslations.split('/')),
+      translationSimpleFilesArray = fs.readdirSync(translationSimpleFilesPath, {withFileTypes: true})
         .filter(item => !item.isDirectory())
         .map(item => item.name);
-    for (const sourceTranslationFile of sourcesArray) {
-      let status = await git.status({ fs, dir: process.cwd(), filepath: [folderWithSimpleJSONs, sourceTranslationFile].join('/') })
-      console.log(`${sourceTranslationFile} status = ${status}`)  
+    for (const translationSimpleFileName of translationSimpleFilesArray) {
+      const translationSimpleLanguageFile = translationSimpleRegExp.exec(translationSimpleFileName);
+      if (translationSimpleLanguageFile && Array.isArray(translationSimpleLanguageFile) && (translationSimpleLanguageFile[1])) {
+        const 
+          translationLanguageId = translationSimpleLanguageFile[1],
+          translationSimpleGitPath = [folderWithSimpleJSONs, translationSimpleFileName].join('/');
+          translationSimpleFileStatus = await git.status({ fs, dir: process.cwd(), filepath: translationSimpleGitPath }),
+          translationCoreFileName = `locale_${translationLanguageId}.json`,
+          translationCoreGitPath = [folderWithCoreTranslations, folderWithCoreTranslations].join('/'),
+          translationCoreFileFullPath = path.join(translationCoreFilesPath, translationCoreFileName);
+        console.log(`${translationSimpleGitPath} status = ${translationSimpleFileStatus}`)  
+        if ((! fs.existsSync(translationCoreFileFullPath)) || (['*added', '*modified'].includes(translationSimpleFileStatus))) {
+          console.log(`File to create/update: '${translationCoreGitPath}'`);
+          const  translationSimpleFileFullPath = path.join(translationSimpleFilesPath, translationSimpleFileName);
+          try {
+            const translationSimpleRaw = fs.readFileSync(translationSimpleFileFullPath);
+            try {
+              const translationSimple = JSON.parse(translationSimpleRaw);
+              if ((typeof(translationSimple) === 'object') && Object.keys(translationSimple).length) {
+                Object.keys(translationSimple).forEach(translationId => {
+                  if (translationSimple[translationId] === '') {
+                    translationSimple[translationId] = `core.${translationId}`;
+                  }
+                })
+                const
+                  translationCore = {
+                    "type": "telegramMenuTranslation",
+                    "language": translationLanguageId,
+                    "version": "1.0",
+                    "translation": {
+                      "core": translationSimple
+                    }
+                  },
+                  translationCoreJSON = JSON.stringify(translationCore, null, 2);
+                try {
+                  fs.writeFileSync(translationCoreFileFullPath, translationCoreJSON);
+                  console.log(`Fully formated core translation file '${translationCoreGitPath}' is created/updated.`);                
+                } catch (error) {
+                  console.error(`Can't write to file '${translationCoreGitPath}'`);
+                }
+              }
+              else {
+                console.warn(`File '${translationSimpleGitPath}' has no data!`)
+              }
+            } catch (error) {
+              console.error(`Can't parse file '${translationSimpleGitPath}'`);
+            }
+          } catch (error) {
+            console.error(`Can't read file '${ftranslationSimpleGitPath}'`);
+          }
+        }
+      }
     }
   } catch (error) {
     core.setFailed(error.message);
