@@ -35,7 +35,7 @@ async function run() {
           translationSimpleGitPath = [folderWithSimpleJSONs, translationSimpleFileName].join('/');
           translationSimpleFileStatus = await git.status({ fs, dir: process.cwd(), filepath: translationSimpleGitPath }),
           translationCoreFileName = `locale_${translationLanguageId}.json`,
-          translationCoreGitPath = [folderWithCoreTranslations, folderWithCoreTranslations].join('/'),
+          translationCoreGitPath = [folderWithCoreTranslations, translationCoreFileName].join('/'),
           translationCoreFileFullPath = path.join(translationCoreFilesPath, translationCoreFileName);
         console.log(`${translationSimpleGitPath} status = ${translationSimpleFileStatus}`)  
         if ((! fs.existsSync(translationCoreFileFullPath)) || (['*added', '*modified'].includes(translationSimpleFileStatus))) {
