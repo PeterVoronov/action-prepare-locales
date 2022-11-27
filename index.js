@@ -20,7 +20,6 @@ async function run() {
     }
     console.log(`folderOfSimpleJSONs ${folderWithSimpleJSONs}!`);
     console.log(`folderOfCoreTranslations ${folderWithCoreTranslations}!`);
-
     const 
       translationSimpleRegExp = new RegExp(/^core_([^._]+)[^.]*\.json$/),
       translationSimpleFilesPath = path.join(process.cwd(),  ...folderWithSimpleJSONs.split('/')),
