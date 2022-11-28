@@ -9,6 +9,14 @@ inputs:
     description: 'The folder with results of conversion translation files'
     required: true
     default: 'locales'
+  git_user_name:
+    description: "The user name for commits"
+    required: false
+    default: 'github-actions'
+  git_user_email:
+    description: "The user email for commits"
+    required: false
+    default: 'github-actions@github.com'
 runs:
   using: 'node16'
   main: 'dist/index.js'
