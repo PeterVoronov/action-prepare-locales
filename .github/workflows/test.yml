@@ -21,4 +21,6 @@ jobs:
     steps:
     - uses: actions/checkout@v3
     - uses: ./
-      working-directory: ./tests
+      with:
+        folder_with_simple_jsons: tests/locales/source
+        folder_with_core_translations: tests/locales
