@@ -2,7 +2,7 @@ const core = require('@actions/core');
 const path = require('path');
 const git = require('isomorphic-git');
 const fs = require('fs');
-const http = require('isomorphic-git/http/node');
+// const http = require('isomorphic-git/http/node');
 
 const
   gitFileAdded = '*added',
@@ -118,7 +118,7 @@ async function run() {
             message
           });
           console.log(`Commit result: '${commitResult}'`);
-          const
+          /* const
             remoteOriginURL = await git.getConfig({ fs, dir, path: 'remote.origin.url' }),
             remoteOriginURLRegExp = /^git@github\.com:([^\/]+)\/([^.]+)\.git$/,
             remoteOriginURLParsed = remoteOriginURLRegExp.exec(remoteOriginURL);
@@ -139,7 +139,7 @@ async function run() {
           }
           catch (error) {
             console.error(`Can't make push. Erros is '${error}'.`);
-          }
+          } */
         }
         catch (error) {
           console.error(`Can't make commit. Erros is '${error}'.`);
