@@ -6,8 +6,9 @@ const path = require('path');
 test('test runs', () => {
   process.env['FOLDER_WITH_SIMPLE_JSONS'] = path.join('dist');
   process.env['FOLDER_WITH_CORE_TRANSLATIONS'] = path.join('dist');
-  const ip = path.join(__dirname, 'index.js');
-  const testDir = path.join(__dirname, 'tests');
-  const result = cp.execSync(`cd ${testDir}; node ${ip}`, {env: process.env}).toString();
+  const cmd = 'node';
+  const args = [path.join(__dirname, 'index.js')];
+  const cwd = path.join(__dirname, 'tests');
+  const result = cp.execFileSync(cmd, args, {cwd, env: process.env}).toString();
   console.log(result);
 });
