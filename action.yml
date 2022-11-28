@@ -19,7 +19,7 @@ inputs:
     default: 'github-actions@github.com'
 outputs:
   is_commit_available: # output will be available to future steps
-  description: 'The indicator of available commit after transformation'
+    description: 'The indicator of available commit after transformation'
 runs:
   using: 'node16'
   main: 'dist/index.js'
