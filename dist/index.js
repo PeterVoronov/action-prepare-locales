@@ -26531,6 +26531,7 @@ async function run() {
             message
           });
           console.log(`Commit result: '${commitResult}'`);
+          core.setOutput('is_commit_available', 'true');
           /* const
             remoteOriginURL = await git.getConfig({ fs, dir, path: 'remote.origin.url' }),
             remoteOriginURLRegExp = /^git@github\.com:([^\/]+)\/([^.]+)\.git$/,
