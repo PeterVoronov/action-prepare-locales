@@ -30750,6 +30750,14 @@ async function run() {
             message
           });
           console.log(`Commit result: '${commitResult}'`);
+          const
+            remoteOriginURL = await git.getConfig({ fs, dir, path: 'remote.origin.url' }),
+            remoteOriginURLRegExp = /^git@github\.com:([^\/]+)\/([^.]+)\.git$/,
+            remoteOriginURLParsed = remoteOriginURLRegExp.exec(remoteOriginURL);
+          if (remoteOriginURLParsed && Array.isArray(remoteOriginURLParsed) && remoteOriginURLParsed[1] && remoteOriginURLParsed[2]) {
+            const newRemoteOriginUrl = `https://github.com/${remoteOriginURLParsed[1]}/${remoteOriginURLParsed[2]}.git`;
+            await git.setConfig({ fs, dir, path: 'remote.origin.url', value: newRemoteOriginUrl });
+          }
           try {
             const pushResult = await git.push({
               fs,
