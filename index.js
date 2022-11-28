@@ -119,28 +119,6 @@ async function run() {
           });
           console.log(`Commit result: '${commitResult}'`);
           core.setOutput('is_commit_available', 'true');
-          /* const
-            remoteOriginURL = await git.getConfig({ fs, dir, path: 'remote.origin.url' }),
-            remoteOriginURLRegExp = /^git@github\.com:([^\/]+)\/([^.]+)\.git$/,
-            remoteOriginURLParsed = remoteOriginURLRegExp.exec(remoteOriginURL);
-          if (remoteOriginURLParsed && Array.isArray(remoteOriginURLParsed) && remoteOriginURLParsed[1] && remoteOriginURLParsed[2]) {
-            const newRemoteOriginUrl = `https://github.com/${remoteOriginURLParsed[1]}/${remoteOriginURLParsed[2]}.git`;
-            await git.setConfig({ fs, dir, path: 'remote.origin.url', value: newRemoteOriginUrl });
-          }
-          try {
-            const pushResult = await git.push({
-              fs,
-              http,
-              dir,
-              remote: 'origin',
-              ref: 'main',
-              onAuth: () => ({ username: process.env.GITHUB_TOKEN })
-            });
-            console.log(pushResult);
-          }
-          catch (error) {
-            console.error(`Can't make push. Erros is '${error}'.`);
-          } */
         }
         catch (error) {
           console.error(`Can't make commit. Erros is '${error}'.`);
