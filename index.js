@@ -2,7 +2,6 @@ const core = require('@actions/core');
 const path = require('path');
 const git = require('isomorphic-git');
 const fs = require('fs');
-// const http = require('isomorphic-git/http/node');
 
 const
   gitFileAdded = '*added',
@@ -10,9 +9,11 @@ const
 
 // most @actions toolkit packages have async methods
 async function run() {
-  let message = 'Update the locales files from the https://simplelocalize.io/\n';
+  let message = '';
   const dir = process.cwd();
-  const addToGitFiles = [];
+  const 
+    addToGitFiles = [],
+    updatedLanguagesList = [];
   try {
     let
       folderWithSimpleJSONs, folderWithCoreTranslations,
@@ -21,20 +22,22 @@ async function run() {
       folderWithSimpleJSONs = core.getInput('folder_with_simple_jsons', { required: true });
     }
     catch (error) {
+      // To have possibility run out of github actions environment (for `index.test.js`)
       folderWithSimpleJSONs = 'locales/source';
     }
     try {
       folderWithCoreTranslations = core.getInput('folder_with_core_translations', { required: true });
     }
     catch (error) {
+      // To have possibility run out of github actions environment (for `index.test.js`)
       folderWithCoreTranslations = 'locales';
     }
     gitUserName = core.getInput('git_user_name');
     if (gitUserName === undefined) gitUserName = 'github-actions';
     gitUserMail = core.getInput('git_user_mail');
     if (gitUserMail === undefined) gitUserMail = 'github-actions@github.com';
-    console.log(`folderOfSimpleJSONs ${folderWithSimpleJSONs}!`);
-    console.log(`folderOfCoreTranslations ${folderWithCoreTranslations}!`);
+    console.log(`Folder with source translation files ${folderWithSimpleJSONs}!`);
+    console.log(`Folder with finally formatted locales ${folderWithCoreTranslations}!`);
     const
       translationSimpleRegExp = /^core_([^._]+)[^.]*\.json$/,
       translationSimpleFilesPath = path.join(process.cwd(), ...folderWithSimpleJSONs.split('/')),
@@ -81,23 +84,24 @@ async function run() {
                   fs.writeFileSync(translationCoreFileFullPath, translationCoreJSON);
                   addToGitFiles.push(translationSimpleGitPath);
                   addToGitFiles.push(translationCoreGitPath);
-                  console.log(`Fully formated core translation file '${translationCoreGitPath}' is created/updated.`);
+                  console.log(`Fully formatted core translation file '${translationCoreGitPath}' is created/updated.`);
                   message += `\t${translationCoreFileStatus} ${translationCoreGitPath}\n`;
+                  updatedLanguagesList.push(translationLanguageId);
                 }
                 catch (error) {
-                  console.error(`Can't write to file '${translationCoreGitPath}'`);
+                  core.error(`Can't write to file '${translationCoreGitPath}'`);
                 }
               }
               else {
-                console.warn(`File '${translationSimpleGitPath}' has no data!`);
+                core.warning(`File '${translationSimpleGitPath}' has no data!`);
               }
             }
             catch (error) {
-              console.error(`Can't parse file '${translationSimpleGitPath}'`);
+              core.error(`Can't parse file '${translationSimpleGitPath}'`);
             }
           }
           catch (error) {
-            console.error(`Can't read file '${translationSimpleGitPath}'`);
+            core.error(`Can't read file '${translationSimpleGitPath}'`);
           }
         }
       }
@@ -108,6 +112,7 @@ async function run() {
           await git.add({ fs, dir, filepath: gitFileToAdd });
         }
         try {
+          message = `Update of the locales(${updatedLanguagesList.join(',')}) files from the https://simplelocalize.io/\n${message}`;
           const commitResult = await git.commit({
             fs,
             dir,
@@ -117,15 +122,19 @@ async function run() {
             },
             message
           });
-          console.log(`Commit result: '${commitResult}'`);
-          core.setOutput('is_commit_available', 'true');
+          if (commitResult) {
+            core.notice(`Commit is successfully made.`);
+            core.setOutput('is_commit_available', 'true');
+          }
         }
         catch (error) {
-          console.error(`Can't make commit. Erros is '${error}'.`);
+          core.error(`Can't make commit. Error is '${error}'.`);
+          core.setFailed(`Can't make commit. Error is '${error}'.`);
         }
       }
       catch (error) {
-        console.error(`Can't add file to commit. Erros is '${error}'.`);
+        core.error(`Can't add file to commit. Error is '${error}'.`);
+        core.setFailed(`Can't add file commit. Error is '${error}'.`);
       }
     }
   }
