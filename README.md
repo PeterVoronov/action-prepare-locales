@@ -3,7 +3,7 @@
 ## Action functionality and dependencies
 It requires execution [simplelocalize/download](https://github.com/simplelocalize/simplelocalize-cli) on some previous action step. It have to download the single language translation .JSON files to the `folder_with_simple_jsons`.
 
-This `action` checks, is the files is changed (from the last commit), and based on result - produces the new, formatted locales files in the `folder_with_core_translations`.
+This `action` checks, if the 'source' translation files is changed (from the last commit), and based on result - produces the new, formatted locales files in the `folder_with_core_translations`.
 After that it make a commit with both - sources and results files.
 
 ## Action inputs
