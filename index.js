@@ -112,7 +112,7 @@ async function run() {
           await git.add({ fs, dir, filepath: gitFileToAdd });
         }
         try {
-          message = `Update of the locales(${updatedLanguagesList.join(',')}) files from the https://simplelocalize.io/\n${message}`;
+          message = `Update of locale files for languages: ${updatedLanguagesList.join(', ')}`;
           const commitResult = await git.commit({
             fs,
             dir,
