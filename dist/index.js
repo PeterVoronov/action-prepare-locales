@@ -26519,7 +26519,7 @@ async function run() {
                     }
                   } 
                   catch (error) {
-                    core.error(`Can't parse old core file '${translationCoreFileFullPath}'`);
+                    core.error(`Can't parse old core file '${translationCoreFileFullPath}'. Error is ${JSON.stringify(error)}.`);
                   }
                 }
                 try {
