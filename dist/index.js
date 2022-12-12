@@ -26500,7 +26500,7 @@ async function run() {
                   try {
                     const translationOldCore = JSON.parse(translationOldCoreJSON);
                     if (translationOldCore && translationOldCore.hasOwnProperty('translation')) {
-                      const translationOldSimple = translationOldCore['translation'];
+                      const translationOldSimple = translationOldCore['translation']['core'];
                       console.log(`translationOldSimple(${translationLanguageId}) = ${JSON.stringify(translationOldSimple, null, 2)}, translationSimple(${translationLanguageId}) = ${JSON.stringify(translationSimple, null, 2)}\n `);
                       Object.keys(translationOldSimple).forEach(key => {
                         if (translationSimple.hasOwnProperty(key) && (translationOldSimple[key] !== translationSimple[key])) {
