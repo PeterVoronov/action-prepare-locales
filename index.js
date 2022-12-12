@@ -88,6 +88,7 @@ async function run() {
                     const translationOldCore = JSON.parse(translationOldCoreJSON);
                     if (translationOldCore && translationOldCore.hasOwnProperty('translation')) {
                       const translationOldSimple = translationOldCore['translation'];
+                      console.log(`translationOldSimple(${translationLanguageId}) = ${JSON.stringify(translationOldSimple, null, 2)}`);
                       Object.keys(translationOldSimple).forEach(key => {
                         if (translationSimple.hasOwnProperty(key) && (translationOldSimple[key] !== translationSimple[key])) {
                           changedKeys[key] = isModified;
@@ -149,7 +150,7 @@ async function run() {
           Object.keys(updatedLanguages).forEach(languageId => {
             message += `\n - ${updatedLanguages[languageId].source === isAdded &&  updatedLanguages[languageId].core === isAdded ? '+' : '*'} ${languageId}:`;
             if (updatedLanguages[languageId].source === updatedLanguages[languageId].core) {
-              message += `\n  - ${updatedLanguages[languageId].source}: ${[updatedLanguages[languageId].sourceName, updatedLanguages[languageId].coreName].join(',')}`;
+              message += `\n  - ${updatedLanguages[languageId].source}:\n   - ${[updatedLanguages[languageId].sourceName, updatedLanguages[languageId].coreName].join('\n   - ')}`;
             }
             else if (updatedLanguages[languageId].core === isAdded) {
               message += `\n  - ${updatedLanguages[languageId].core}: ${updatedLanguages[languageId].coreName},`;
