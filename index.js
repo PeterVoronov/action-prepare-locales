@@ -88,7 +88,7 @@ async function run() {
                     const translationOldCore = JSON.parse(translationOldCoreJSON);
                     if (translationOldCore && translationOldCore.hasOwnProperty('translation')) {
                       const translationOldSimple = translationOldCore['translation'];
-                      console.log(`translationOldSimple(${translationLanguageId}) = ${JSON.stringify(translationOldSimple, null, 2)}`);
+                      console.log(`translatiocd ..nOldSimple(${translationLanguageId}) = ${JSON.stringify(translationOldSimple, null, 2)}`);
                       Object.keys(translationOldSimple).forEach(key => {
                         if (translationSimple.hasOwnProperty(key) && (translationOldSimple[key] !== translationSimple[key])) {
                           changedKeys[key] = isModified;
