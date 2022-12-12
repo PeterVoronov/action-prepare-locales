@@ -6,7 +6,12 @@ const fs = require('fs');
 const
   isAdded = '*added',
   isModified = '*modified',
-  isDeleted = '*deleted';
+  isDeleted = '*deleted',
+  isOpsSymbol = {
+    [isAdded]: '+',
+    [isModified]: '*',
+    [isDeleted]: '-',
+  };
 
 // most @actions toolkit packages have async methods
 async function run() {
@@ -149,32 +154,17 @@ async function run() {
         try {
           message = `Update of locale files for languages: ${Object.keys(updatedLanguages).join(', ')}`;
           Object.keys(updatedLanguages).forEach(languageId => {
-            message += `\n - ${updatedLanguages[languageId].source === isAdded &&  updatedLanguages[languageId].core === isAdded ? '+' : '*'} ${languageId}:`;
-            if (updatedLanguages[languageId].source === updatedLanguages[languageId].core) {
-              message += `\n  - ${updatedLanguages[languageId].source}:\n   - ${[updatedLanguages[languageId].sourceName, updatedLanguages[languageId].coreName].join('\n   - ')}`;
-            }
-            else if (updatedLanguages[languageId].core === isAdded) {
-              message += `\n  - ${updatedLanguages[languageId].core}: ${updatedLanguages[languageId].coreName},`;
-              message += `\n  - ${updatedLanguages[languageId].source}: ${updatedLanguages[languageId].sourceName}`;
-            }
-            else {
-              message += `\n  - ${updatedLanguages[languageId].source}: ${updatedLanguages[languageId].sourceName},`;
-              message += `\n  - ${updatedLanguages[languageId].core}: ${updatedLanguages[languageId].coreName}`;
-            }
-            if (updatedLanguages[languageId].keys && Object.keys(updatedLanguages[languageId].keys).length) {
-              const changedKeys = updatedLanguages[languageId].keys;
-              [isAdded, isModified, isDeleted].forEach(keyAction => {
-                const keysInAction = Object.keys(changedKeys).filter(key => (changedKeys[key] === keyAction));
-                if (keysInAction.length) {
-                  message += `\n   - ${keyAction}:`;
-                  keysInAction.forEach(key => {
-                    message += `\n    - ${key}`;
-                  });
-                }
+            message += `\n  ${updatedLanguages[languageId].source === isAdded &&  updatedLanguages[languageId].core === isAdded ? '+' : '*'} language ${languageId}:`;
+            message += `\n   Changes in files:`; 
+            message += `\n    ${isOpsSymbol[updatedLanguages[languageId].source]}: ${updatedLanguages[languageId].sourceName},`;
+            message += `\n    ${isOpsSymbol[updatedLanguages[languageId].core]}: ${updatedLanguages[languageId].coreName}.`;
+            const changedKeys = updatedLanguages[languageId].keys;
+            if (changedKeys && Object.keys(changedKeys).length) {
+              message += `\n   Changes in translation keys:`;
+              const lastIndex = Object.keys(changedKeys).length - 1;
+              Object.keys().sort().forEach((key, index) => {
+                message += `\n    ${isOpsSymbol[changedKeys[key]]} ${key}${index === lastIndex ? '.' : ','}`;
               });
-            }
-            else {
-              message += '.';
             }
           });
           const commitResult = await git.commit({
