@@ -26506,7 +26506,6 @@ async function run() {
                     const translationOldCore = JSON.parse(translationOldCoreJSON);
                     if (translationOldCore && translationOldCore.hasOwnProperty('translation')) {
                       const translationOldSimple = translationOldCore['translation']['core'];
-                      console.log(`translationOldSimple(${translationLanguageId}) = ${JSON.stringify(translationOldSimple, null, 2)}, translationSimple(${translationLanguageId}) = ${JSON.stringify(translationSimple, null, 2)}\n `);
                       Object.keys(translationOldSimple).forEach(key => {
                         if (translationSimple.hasOwnProperty(key) && (translationOldSimple[key] !== translationSimple[key])) {
                           changedKeys[key] = isModified;
@@ -26515,7 +26514,6 @@ async function run() {
                           changedKeys[key] = isDeleted;
                         }
                       });
-                      console.log(`changedKeys(${translationLanguageId}) = ${JSON.stringify(changedKeys, null, 2)}`);
                       Object.keys(translationSimple).forEach(key => {
                         if (! translationOldSimple.hasOwnProperty(key)) {
                           changedKeys[key] = isAdded;
@@ -26567,23 +26565,17 @@ async function run() {
         try {
           message = `Update of locale files for languages: ${Object.keys(updatedLanguages).join(', ')}`;
           Object.keys(updatedLanguages).forEach(languageId => {
-            message += `\n  ${updatedLanguages[languageId].source === isAdded &&  updatedLanguages[languageId].core === isAdded ? '+' : '*'}language ${languageId}:`;
-            console.log(message);
+            message += `\n  ${updatedLanguages[languageId].source === isAdded &&  updatedLanguages[languageId].core === isAdded ? '+' : '*'} language '${languageId}':`;
             message += `\n   Changes in files:`; 
-            console.log(message);
-            message += `\n    ${isOpsSymbol[updatedLanguages[languageId].source]}${updatedLanguages[languageId].sourceName},`;
-            console.log(message);
-            message += `\n    ${isOpsSymbol[updatedLanguages[languageId].core]}${updatedLanguages[languageId].coreName}.`;
-            console.log(message);
+            message += `\n    ${isOpsSymbol[updatedLanguages[languageId].source]} ${updatedLanguages[languageId].sourceName},`;
+            message += `\n    ${isOpsSymbol[updatedLanguages[languageId].core]} ${updatedLanguages[languageId].coreName}.`;
             const changedKeys = updatedLanguages[languageId].changedKeys;
             if (changedKeys && Object.keys(changedKeys).length) {
               message += `\n   Changes in translation keys:`;
-              console.log(message);
               const lastIndex = Object.keys(changedKeys).length - 1;
               Object.keys(changedKeys).sort().forEach((key, index) => {
                 message += `\n    ${isOpsSymbol[changedKeys[key]]} ${key}${index === lastIndex ? '.' : ','}`;
               });
-              console.log(message);
             }
           });
           const commitResult = await git.commit({
