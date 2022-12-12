@@ -4,8 +4,14 @@ const git = require('isomorphic-git');
 const fs = require('fs');
 
 const
-  gitFileAdded = '*added',
-  gitFileModified = '*modified';
+  isAdded = '*added',
+  isModified = '*modified',
+  isDeleted = '*deleted',
+  isOpsSymbol = {
+    [isAdded]: '+',
+    [isModified]: '*',
+    [isDeleted]: '-',
+  };
 
 // most @actions toolkit packages have async methods
 async function run() {
@@ -13,7 +19,7 @@ async function run() {
   const dir = process.cwd();
   const 
     addToGitFiles = [],
-    updatedLanguagesList = [];
+    updatedLanguages = {};
   try {
     let
       folderWithSimpleJSONs, folderWithCoreTranslations,
@@ -57,9 +63,9 @@ async function run() {
           translationCoreGitPath = [folderWithCoreTranslations, translationCoreFileName].join('/'),
           translationCoreFileFullPath = path.join(translationCoreFilesPath, translationCoreFileName);
         console.log(`${translationSimpleGitPath} status = ${translationSimpleFileStatus}`);
-        if ((!fs.existsSync(translationCoreFileFullPath)) || ([gitFileAdded, gitFileModified].includes(translationSimpleFileStatus))) {
+        if ((!fs.existsSync(translationCoreFileFullPath)) || ([isAdded, isModified].includes(translationSimpleFileStatus))) {
           console.log(`File to create/update: '${translationCoreGitPath}'`);
-          const translationCoreFileStatus = fs.existsSync(translationCoreFileFullPath) ? gitFileModified : gitFileAdded;
+          const translationCoreFileStatus = fs.existsSync(translationCoreFileFullPath) ? isModified : isAdded;
           try {
             const translationSimpleRaw = fs.readFileSync(translationSimpleFileFullPath);
             try {
@@ -79,14 +85,46 @@ async function run() {
                       core: translationSimple
                     }
                   },
-                  translationCoreJSON = JSON.stringify(translationCore, null, 2);
+                  translationCoreJSON = JSON.stringify(translationCore, null, 2),
+                  changedKeys = {};
+                if (fs.existsSync(translationCoreFileFullPath)) {
+                  const translationOldCoreJSON = fs.readFileSync(translationCoreFileFullPath);
+                  try {
+                    const translationOldCore = JSON.parse(translationOldCoreJSON);
+                    if (translationOldCore && translationOldCore.hasOwnProperty('translation')) {
+                      const translationOldSimple = translationOldCore['translation']['core'];
+                      Object.keys(translationOldSimple).forEach(key => {
+                        if (translationSimple.hasOwnProperty(key) && (translationOldSimple[key] !== translationSimple[key])) {
+                          changedKeys[key] = isModified;
+                        }
+                        else if (! translationSimple.hasOwnProperty(key)) {
+                          changedKeys[key] = isDeleted;
+                        }
+                      });
+                      Object.keys(translationSimple).forEach(key => {
+                        if (! translationOldSimple.hasOwnProperty(key)) {
+                          changedKeys[key] = isAdded;
+                        }
+                      });
+                    }
+                  } 
+                  catch (error) {
+                    core.error(`Can't parse old core file '${translationCoreFileFullPath}'. Error is ${JSON.stringify(error)}.`);
+                  }
+                }
                 try {
                   fs.writeFileSync(translationCoreFileFullPath, translationCoreJSON);
                   addToGitFiles.push(translationSimpleGitPath);
                   addToGitFiles.push(translationCoreGitPath);
                   console.log(`Fully formatted core translation file '${translationCoreGitPath}' is created/updated.`);
                   message += `\t${translationCoreFileStatus} ${translationCoreGitPath}\n`;
-                  updatedLanguagesList.push(translationLanguageId);
+                  updatedLanguages[translationLanguageId] = {
+                    source: translationSimpleFileStatus,
+                    sourceName: translationSimpleGitPath,
+                    core:  translationCoreFileStatus,
+                    coreName: translationCoreGitPath,
+                    changedKeys: changedKeys
+                  };
                 }
                 catch (error) {
                   core.error(`Can't write to file '${translationCoreGitPath}'`);
@@ -97,7 +135,7 @@ async function run() {
               }
             }
             catch (error) {
-              core.error(`Can't parse file '${translationSimpleGitPath}'`);
+              core.error(`Can't parse file '${translationSimpleGitPath}'. Error is ${JSON.stringify(error)}.`);
             }
           }
           catch (error) {
@@ -112,7 +150,21 @@ async function run() {
           await git.add({ fs, dir, filepath: gitFileToAdd });
         }
         try {
-          message = `Update of locale files for languages: ${updatedLanguagesList.join(', ')}`;
+          message = `Update of locale files for languages: ${Object.keys(updatedLanguages).join(', ')}`;
+          Object.keys(updatedLanguages).forEach(languageId => {
+            message += `\n  ${updatedLanguages[languageId].source === isAdded &&  updatedLanguages[languageId].core === isAdded ? '+' : '*'} language '${languageId}':`;
+            message += `\n   Changes in files:`; 
+            message += `\n    ${isOpsSymbol[updatedLanguages[languageId].source]} ${updatedLanguages[languageId].sourceName},`;
+            message += `\n    ${isOpsSymbol[updatedLanguages[languageId].core]} ${updatedLanguages[languageId].coreName}.`;
+            const changedKeys = updatedLanguages[languageId].changedKeys;
+            if (changedKeys && Object.keys(changedKeys).length) {
+              message += `\n   Changes in translation keys:`;
+              const lastIndex = Object.keys(changedKeys).length - 1;
+              Object.keys(changedKeys).sort().forEach((key, index) => {
+                message += `\n    ${isOpsSymbol[changedKeys[key]]} ${key}${index === lastIndex ? '.' : ','}`;
+              });
+            }
+          });
           const commitResult = await git.commit({
             fs,
             dir,
