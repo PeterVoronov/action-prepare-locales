@@ -132,7 +132,7 @@ async function run() {
               }
             }
             catch (error) {
-              core.error(`Can't parse file '${translationSimpleGitPath}'`);
+              core.error(`Can't parse file '${translationSimpleGitPath}'. Error is ${JSON.stringify(error)}.`);
             }
           }
           catch (error) {
