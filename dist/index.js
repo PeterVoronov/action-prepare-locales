@@ -26417,8 +26417,9 @@ const git = __nccwpck_require__(5114);
 const fs = __nccwpck_require__(7147);
 
 const
-  gitFileAdded = '*added',
-  gitFileModified = '*modified';
+  isAdded = '*added',
+  isModified = '*modified',
+  isDeleted = '*deleted';
 
 // most @actions toolkit packages have async methods
 async function run() {
@@ -26426,7 +26427,7 @@ async function run() {
   const dir = process.cwd();
   const 
     addToGitFiles = [],
-    updatedLanguagesList = [];
+    updatedLanguages = {};
   try {
     let
       folderWithSimpleJSONs, folderWithCoreTranslations,
@@ -26470,9 +26471,9 @@ async function run() {
           translationCoreGitPath = [folderWithCoreTranslations, translationCoreFileName].join('/'),
           translationCoreFileFullPath = path.join(translationCoreFilesPath, translationCoreFileName);
         console.log(`${translationSimpleGitPath} status = ${translationSimpleFileStatus}`);
-        if ((!fs.existsSync(translationCoreFileFullPath)) || ([gitFileAdded, gitFileModified].includes(translationSimpleFileStatus))) {
+        if ((!fs.existsSync(translationCoreFileFullPath)) || ([isAdded, isModified].includes(translationSimpleFileStatus))) {
           console.log(`File to create/update: '${translationCoreGitPath}'`);
-          const translationCoreFileStatus = fs.existsSync(translationCoreFileFullPath) ? gitFileModified : gitFileAdded;
+          const translationCoreFileStatus = fs.existsSync(translationCoreFileFullPath) ? isModified : isAdded;
           try {
             const translationSimpleRaw = fs.readFileSync(translationSimpleFileFullPath);
             try {
@@ -26492,14 +26493,46 @@ async function run() {
                       core: translationSimple
                     }
                   },
-                  translationCoreJSON = JSON.stringify(translationCore, null, 2);
+                  translationCoreJSON = JSON.stringify(translationCore, null, 2),
+                  changedKeys = {};
+                if (fs.existsSync(translationCoreFileFullPath)) {
+                  const translationOldCoreJSON = fs.readFileSync(translationCoreFileFullPath);
+                  try {
+                    const translationOldCore = JSON.parse(translationOldCoreJSON);
+                    if (translationOldCore && translationOldCore.hasOwnProperty('translation')) {
+                      const translationOldSimple = translationOldCore['translation'];
+                      Object.keys(translationOldSimple).forEach(key => {
+                        if (translationSimple.hasOwnProperty(key) && (translationOldSimple[key] !== translationSimple[key])) {
+                          changedKeys[key] = isModified;
+                        }
+                        else if (! translationSimple.hasOwnProperty(key)) {
+                          changedKeys[key] = isDeleted;
+                        }
+                      });
+                      Object.keys(translationSimple).forEach(key => {
+                        if (! translationOldSimple.hasOwnProperty(key)) {
+                          changedKeys[key] = isAdded;
+                        }
+                      });
+                    }
+                  } 
+                  catch (error) {
+                    core.error(`Can't parse old core file '${translationCoreFileFullPath}'`);
+                  }
+                }
                 try {
                   fs.writeFileSync(translationCoreFileFullPath, translationCoreJSON);
                   addToGitFiles.push(translationSimpleGitPath);
                   addToGitFiles.push(translationCoreGitPath);
                   console.log(`Fully formatted core translation file '${translationCoreGitPath}' is created/updated.`);
                   message += `\t${translationCoreFileStatus} ${translationCoreGitPath}\n`;
-                  updatedLanguagesList.push(translationLanguageId);
+                  updatedLanguages[translationLanguageId] = {
+                    source: translationSimpleFileStatus,
+                    sourceName: translationSimpleGitPath,
+                    core:  translationCoreFileStatus,
+                    coreName: translationCoreGitPath,
+                    keys: changedKeys
+                  };
                 }
                 catch (error) {
                   core.error(`Can't write to file '${translationCoreGitPath}'`);
@@ -26525,7 +26558,36 @@ async function run() {
           await git.add({ fs, dir, filepath: gitFileToAdd });
         }
         try {
-          message = `Update of locale files for languages: ${updatedLanguagesList.join(', ')}`;
+          message = `Update of locale files for languages: ${Object.keys(updatedLanguages).join(', ')}`;
+          Object.keys(updatedLanguages).forEach(languageId => {
+            message += `\n - ${updatedLanguages[languageId].source === isAdded &&  updatedLanguages[languageId].core === isAdded ? '+' : '*'} ${languageId}:`;
+            if (updatedLanguages[languageId].source === updatedLanguages[languageId].core) {
+              message += `\n  - ${updatedLanguages[languageId].source}: ${[updatedLanguages[languageId].sourceName, updatedLanguages[languageId].coreName].join(',')}`;
+            }
+            else if (updatedLanguages[languageId].core === isAdded) {
+              message += `\n  - ${updatedLanguages[languageId].core}: ${updatedLanguages[languageId].coreName},`;
+              message += `\n  - ${updatedLanguages[languageId].source}: ${updatedLanguages[languageId].sourceName}`;
+            }
+            else {
+              message += `\n  - ${updatedLanguages[languageId].source}: ${updatedLanguages[languageId].sourceName},`;
+              message += `\n  - ${updatedLanguages[languageId].core}: ${updatedLanguages[languageId].coreName}`;
+            }
+            if (updatedLanguages[languageId].keys && Object.keys(updatedLanguages[languageId].keys).length) {
+              const changedKeys = updatedLanguages[languageId].keys;
+              [isAdded, isModified, isDeleted].forEach(keyAction => {
+                const keysInAction = Object.keys(changedKeys).filter(key => (changedKeys[key] === keyAction));
+                if (keysInAction.length) {
+                  message += `\n   - ${keysInAction}:`;
+                  keysInAction.forEach(key => {
+                    message += `\n    - ${key}`;
+                  });
+                }
+              });
+            }
+            else {
+              message += '.';
+            }
+          });
           const commitResult = await git.commit({
             fs,
             dir,
