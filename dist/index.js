@@ -26510,6 +26510,7 @@ async function run() {
                           changedKeys[key] = isDeleted;
                         }
                       });
+                      console.log(`changedKeys(${translationLanguageId}) = ${JSON.stringify(changedKeys, null, 2)}`);
                       Object.keys(translationSimple).forEach(key => {
                         if (! translationOldSimple.hasOwnProperty(key)) {
                           changedKeys[key] = isAdded;
