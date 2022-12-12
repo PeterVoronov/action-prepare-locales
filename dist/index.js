@@ -26568,16 +26568,22 @@ async function run() {
           message = `Update of locale files for languages: ${Object.keys(updatedLanguages).join(', ')}`;
           Object.keys(updatedLanguages).forEach(languageId => {
             message += `\n  ${updatedLanguages[languageId].source === isAdded &&  updatedLanguages[languageId].core === isAdded ? '+' : '*'} language ${languageId}:`;
+            console.log(message);
             message += `\n   Changes in files:`; 
+            console.log(message);
             message += `\n    ${isOpsSymbol[updatedLanguages[languageId].source]}: ${updatedLanguages[languageId].sourceName},`;
+            console.log(message);
             message += `\n    ${isOpsSymbol[updatedLanguages[languageId].core]}: ${updatedLanguages[languageId].coreName}.`;
+            console.log(message);
             const changedKeys = updatedLanguages[languageId].keys;
             if (changedKeys && Object.keys(changedKeys).length) {
               message += `\n   Changes in translation keys:`;
+              console.log(message);
               const lastIndex = Object.keys(changedKeys).length - 1;
               Object.keys().sort().forEach((key, index) => {
                 message += `\n    ${isOpsSymbol[changedKeys[key]]} ${key}${index === lastIndex ? '.' : ','}`;
               });
+              console.log(message);
             }
           });
           const commitResult = await git.commit({
