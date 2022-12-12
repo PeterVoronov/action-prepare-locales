@@ -26579,7 +26579,7 @@ async function run() {
               [isAdded, isModified, isDeleted].forEach(keyAction => {
                 const keysInAction = Object.keys(changedKeys).filter(key => (changedKeys[key] === keyAction));
                 if (keysInAction.length) {
-                  message += `\n   - ${keysInAction}:`;
+                  message += `\n   - ${keyAction}:`;
                   keysInAction.forEach(key => {
                     message += `\n    - ${key}`;
                   });
