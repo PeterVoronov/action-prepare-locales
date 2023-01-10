@@ -26430,7 +26430,7 @@ const
 async function run() {
   let message = '';
   const dir = process.cwd();
-  const 
+  const
     addToGitFiles = [],
     updatedLanguages = {};
   try {
@@ -26489,13 +26489,17 @@ async function run() {
                     translationSimple[translationId] = `core.${translationId}`;
                   }
                 });
+                const sortedTranslation = {};
+                Object.keys(translationSimple).sort().forEach(translationId => {
+                  sortedTranslation[translationId] = translationSimple[translationId];
+                });
                 const
                   translationCore = {
                     type: 'telegramMenuTranslation',
                     language: translationLanguageId,
                     version: '1.0',
                     translation: {
-                      core: translationSimple
+                      core: sortedTranslation
                     }
                   },
                   translationCoreJSON = JSON.stringify(translationCore, null, 2),
@@ -26520,7 +26524,7 @@ async function run() {
                         }
                       });
                     }
-                  } 
+                  }
                   catch (error) {
                     core.error(`Can't parse old core file '${translationCoreFileFullPath}'. Error is ${JSON.stringify(error)}.`);
                   }
@@ -26566,7 +26570,7 @@ async function run() {
           message = `Update of locale files for languages: ${Object.keys(updatedLanguages).join(', ')}`;
           Object.keys(updatedLanguages).forEach(languageId => {
             message += `\n  ${updatedLanguages[languageId].source === isAdded &&  updatedLanguages[languageId].core === isAdded ? '+' : '*'} language '${languageId}':`;
-            message += `\n   Changes in files:`; 
+            message += `\n   Changes in files:`;
             message += `\n    ${isOpsSymbol[updatedLanguages[languageId].source]} ${updatedLanguages[languageId].sourceName},`;
             message += `\n    ${isOpsSymbol[updatedLanguages[languageId].core]} ${updatedLanguages[languageId].coreName}.`;
             const changedKeys = updatedLanguages[languageId].changedKeys;
