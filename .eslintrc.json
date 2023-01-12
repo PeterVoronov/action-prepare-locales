@@ -20,6 +20,7 @@
         "space-before-function-paren": ["error", { "anonymous": "never", "named": "never", "asyncArrow": "always" }],
         "brace-style": ["error", "stroustrup", { "allowSingleLine": true }],
         "no-useless-escape": "off",
-        "no-prototype-builtins": "off"
+        "no-prototype-builtins": "off",
+        "strict": ["error", "global"]
     }
 }
