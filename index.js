@@ -169,7 +169,7 @@ async function run() {
             for (const [gitFolderToAdd, currentLanguages] of Object.entries(foldersToAddToGit)) {
               message += `\n In folder ${gitFolderToAdd} for languages: ${Object.keys(currentLanguages).join(', ')}`;
               for (const [languageId, currentLanguage] of Object.entries(currentLanguages)) {
-                message += `\n  ${currentLanguage.source === isAdded &&  currentLanguage.core === isAdded ? '+' : '*'} language '${languageId}':`;
+                message += `\n  ${currentLanguage.source === isAdded &&  currentLanguage.core === isAdded ? '+' : '*'} Language '${languageId}':`;
                 message += `\n   Changes in files:`;
                 message += `\n    ${isOpsSymbol[currentLanguage.source.status]} ${currentLanguage.source.path},`;
                 message += `\n    ${isOpsSymbol[currentLanguage.transformed.status]} ${currentLanguage.transformed.path}.`;
