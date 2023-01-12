@@ -2,6 +2,7 @@ const core = require('@actions/core');
 const path = require('path');
 const git = require('isomorphic-git');
 const fs = require('fs');
+const glob = require('glob');
 
 const
   isAdded = '*added',
@@ -13,185 +14,217 @@ const
     [isDeleted]: '-',
   };
 
+function translationSortAndFill(translationObject, translationPrefix) {
+  const sortedTranslation = {};
+  Object.keys(translationObject).sort().forEach(translationId => {
+    const currentId = translationPrefix ? [translationPrefix, translationId].join('.') : translationId;
+    if (typeof translationObject[translationId] === 'object') {
+      sortedTranslation[translationId] = translationSortAndFill(translationObject[translationId], currentId);
+    }
+    else {
+      sortedTranslation[translationId] = translationObject[translationId] ? translationObject[translationId] : currentId;
+    }
+  });
+  return sortedTranslation;
+}
+
+function translationToPlain(translationObject, translationPrefix) {
+  const translationPlain = {};
+  Object.keys(translationObject).forEach(translationId => {
+    const currentId = translationPrefix ? [translationPrefix, translationId].join('.') : translationId;
+    if (typeof translationObject[translationId] === 'object') {
+      const inheritedPlain = translationToPlain(translationObject[translationId], translationId);
+      Object.keys(inheritedPlain).forEach(inheritedTranslationId => {
+        translationPlain[inheritedTranslationId] = inheritedPlain[inheritedTranslationId];
+      });
+    }
+    else {
+      translationPlain[currentId] = translationObject[translationId];
+    }
+  });
+  return translationPlain;
+}
+
 // most @actions toolkit packages have async methods
 async function run() {
-  let message = '';
   const dir = process.cwd();
-  const
-    addToGitFiles = [],
-    updatedLanguages = {};
+  const foldersToAddToGit = {};
   try {
     let
-      folderWithSimpleJSONs, folderWithCoreTranslations,
-      gitUserName, gitUserMail;
+      sourceTranslationsPattern, transformedTranslationsRelativePathAndPattern;
     try {
-      folderWithSimpleJSONs = core.getInput('folder_with_simple_jsons', { required: true });
-    }
-    catch (error) {
-      // To have possibility run out of github actions environment (for `index.test.js`)
-      folderWithSimpleJSONs = 'locales/source';
-    }
-    try {
-      folderWithCoreTranslations = core.getInput('folder_with_core_translations', { required: true });
-    }
-    catch (error) {
-      // To have possibility run out of github actions environment (for `index.test.js`)
-      folderWithCoreTranslations = 'locales';
-    }
-    gitUserName = core.getInput('git_user_name');
-    if (gitUserName === undefined) gitUserName = 'github-actions';
-    gitUserMail = core.getInput('git_user_mail');
-    if (gitUserMail === undefined) gitUserMail = 'github-actions@github.com';
-    console.log(`Folder with source translation files ${folderWithSimpleJSONs}!`);
-    console.log(`Folder with finally formatted locales ${folderWithCoreTranslations}!`);
-    const
-      translationSimpleRegExp = /^core_([^._]+)[^.]*\.json$/,
-      translationSimpleFilesPath = path.join(process.cwd(), ...folderWithSimpleJSONs.split('/')),
-      translationCoreFilesPath = path.join(process.cwd(), ...folderWithCoreTranslations.split('/')),
-      translationSimpleFilesArray = fs.readdirSync(translationSimpleFilesPath, { withFileTypes: true })
-        .filter(item => !item.isDirectory())
-        .map(item => item.name);
-    for (const translationSimpleFileName of translationSimpleFilesArray) {
-      const translationSimpleLanguageFile = translationSimpleRegExp.exec(translationSimpleFileName);
-      if (translationSimpleLanguageFile && Array.isArray(translationSimpleLanguageFile) && (translationSimpleLanguageFile[1])) {
+      sourceTranslationsPattern = core.getInput('source_translations_pattern', { required: true });
+      try {
+        transformedTranslationsRelativePathAndPattern = core.getInput('transformed_translations_relative_path_and_pattern', { required: true });
+        let gitUserName = core.getInput('git_user_name');
+        if (! gitUserName) gitUserName = 'github-actions';
+        let gitUserMail = core.getInput('git_user_mail');
+        if (! gitUserMail) gitUserMail = 'github-actions@github.com';
+        let isDryRun = core.getInput('dry_run');
+        if ((! isDryRun) || (isDryRun !== 'true')) {
+          isDryRun = false;
+        }
+        else {
+          isDryRun = true;
+        }
+        console.log(`Source translations pattern = ${sourceTranslationsPattern}!`);
+        console.log(`Transformed translation pattern =  ${transformedTranslationsRelativePathAndPattern}!`);
+        const sourceFileRegExp = new RegExp(path.basename(sourceTranslationsPattern).replace(/\?/g,'.'));
+        sourceTranslationsPattern = sourceTranslationsPattern.replace(/[()]/g, '');
         const
-          translationLanguageId = translationSimpleLanguageFile[1],
-          translationSimpleGitPath = [folderWithSimpleJSONs, translationSimpleFileName].join('/'),
-          translationSimpleFileStatus = await git.status({ fs, dir, filepath: translationSimpleGitPath }),
-          translationSimpleFileFullPath = path.join(translationSimpleFilesPath, translationSimpleFileName),
-          translationCoreFileName = `locale_${translationLanguageId}.json`,
-          translationCoreGitPath = [folderWithCoreTranslations, translationCoreFileName].join('/'),
-          translationCoreFileFullPath = path.join(translationCoreFilesPath, translationCoreFileName);
-        console.log(`${translationSimpleGitPath} status = ${translationSimpleFileStatus}`);
-        if ((!fs.existsSync(translationCoreFileFullPath)) || ([isAdded, isModified].includes(translationSimpleFileStatus))) {
-          console.log(`File to create/update: '${translationCoreGitPath}'`);
-          const translationCoreFileStatus = fs.existsSync(translationCoreFileFullPath) ? isModified : isAdded;
-          try {
-            const translationSimpleRaw = fs.readFileSync(translationSimpleFileFullPath);
-            try {
-              const translationSimple = JSON.parse(translationSimpleRaw);
-              if ((typeof translationSimple === 'object') && Object.keys(translationSimple).length) {
-                Object.keys(translationSimple).forEach(translationId => {
-                  if (translationSimple[translationId] === '') {
-                    translationSimple[translationId] = `core.${translationId}`;
-                  }
-                });
-                const sortedTranslation = {};
-                Object.keys(translationSimple).sort().forEach(translationId => {
-                  sortedTranslation[translationId] = translationSimple[translationId];
-                });
-                const
-                  translationCore = {
-                    type: 'telegramMenuTranslation',
-                    language: translationLanguageId,
-                    version: '1.0',
-                    translation: {
-                      core: sortedTranslation
-                    }
-                  },
-                  translationCoreJSON = JSON.stringify(translationCore, null, 2),
-                  changedKeys = {};
-                if (fs.existsSync(translationCoreFileFullPath)) {
-                  const translationOldCoreJSON = fs.readFileSync(translationCoreFileFullPath);
+          transformedTranslationsRelativePath = path.dirname(transformedTranslationsRelativePathAndPattern),
+          transformedTranslationsPattern = path.basename(transformedTranslationsRelativePathAndPattern);
+        const sourceFilesArray = glob.sync(sourceTranslationsPattern);
+        if (sourceFilesArray && sourceFilesArray.length) {
+          for (const sourceFullPath of sourceFilesArray) {
+            const
+              sourceFolder = path.dirname(sourceFullPath),
+              sourceFileName = path.basename(sourceFullPath),
+              sourceFileMask = sourceFileRegExp.exec(sourceFileName);
+            if (sourceFileMask && (sourceFileMask.length === 2) && sourceFileMask[1]) {
+              const
+                translationLanguageId = sourceFileMask[1],
+                transformedFolder = path.join(sourceFolder, transformedTranslationsRelativePath),
+                transformedFileName = transformedTranslationsPattern.replace('$language$', translationLanguageId),
+                transformedFullPath= path.join(transformedFolder, transformedFileName),
+                sourceFileStatus = await git.status({ fs, dir, filepath: sourceFullPath });
+                console.log(`${sourceFullPath} status = ${sourceFileStatus}`);
+                if ((!fs.existsSync(transformedFullPath)) || ([isAdded, isModified].includes(sourceFileStatus))) {
+                  console.log(`File to create/update: '${transformedFullPath}'`);
+                  const transformedFileStatus = fs.existsSync(transformedFullPath) ? isModified : isAdded;
                   try {
-                    const translationOldCore = JSON.parse(translationOldCoreJSON);
-                    if (translationOldCore && translationOldCore.hasOwnProperty('translation')) {
-                      const translationOldSimple = translationOldCore['translation']['core'];
-                      Object.keys(translationOldSimple).forEach(key => {
-                        if (translationSimple.hasOwnProperty(key) && (translationOldSimple[key] !== translationSimple[key])) {
-                          changedKeys[key] = isModified;
+                    const translationSourceRaw = fs.readFileSync(sourceFullPath);
+                    try {
+                      const translationSource = JSON.parse(translationSourceRaw);
+                      if ((typeof translationSource === 'object') && Object.keys(translationSource).length) {
+                        const
+                          translationSorted = translationSortAndFill(translationSource, ''),
+                          translationTransformed = {
+                            type: 'telegramMenuTranslation',
+                            language: translationLanguageId,
+                            version: '1.0',
+                            translation: translationSorted
+                          },
+                          translationTransformedJSON = JSON.stringify(translationTransformed, null, 2),
+                          changedKeys = {};
+                        if (fs.existsSync(transformedFullPath)) {
+                          const transformedOldRaw = fs.readFileSync(transformedFullPath);
+                          try {
+                            const translationOld = JSON.parse(transformedOldRaw);
+                            if (translationOld && translationOld.hasOwnProperty('translation')) {
+                              const
+                                translationOldPlain = translationToPlain(translationOld['translation'], ''),
+                                translationPlain = translationToPlain(translationSorted, '');
+                              Object.keys(translationOldPlain).forEach(key => {
+                                if (translationPlain.hasOwnProperty(key) && (translationOldPlain[key] !== translationPlain[key])) {
+                                  changedKeys[key] = isModified;
+                                }
+                                else if (! translationPlain.hasOwnProperty(key)) {
+                                  changedKeys[key] = isDeleted;
+                                }
+                              });
+                              Object.keys(translationPlain).forEach(key => {
+                                if (! translationOldPlain.hasOwnProperty(key)) {
+                                  changedKeys[key] = isAdded;
+                                }
+                              });
+                            }
+                          }
+                          catch (error) {
+                            core.error(`Can't parse old core file '${transformedFullPath}'. Error is ${JSON.stringify(error)}.`);
+                          }
                         }
-                        else if (! translationSimple.hasOwnProperty(key)) {
-                          changedKeys[key] = isDeleted;
+                        try {
+                          fs.writeFileSync(transformedFullPath, translationTransformedJSON);
+                          console.log(`Transformed translation file '${transformedFullPath}' is created/updated.`);
+                          if (! foldersToAddToGit.hasOwnProperty(sourceFolder)) foldersToAddToGit[sourceFolder] = {};
+                          foldersToAddToGit[sourceFolder][translationLanguageId] = {
+                            source: {path: sourceFullPath, status: sourceFileStatus},
+                            transformed: {path: transformedFullPath, status: transformedFileStatus},
+                            changedKeys: changedKeys
+                          };
                         }
-                      });
-                      Object.keys(translationSimple).forEach(key => {
-                        if (! translationOldSimple.hasOwnProperty(key)) {
-                          changedKeys[key] = isAdded;
+                        catch (error) {
+                          core.error(`Can't write to file '${transformedFullPath}'`);
                         }
-                      });
+                      }
+                      else {
+                        core.warning(`File '${sourceFileStatus}' has no data!`);
+                      }
+                    }
+                    catch (error) {
+                      core.error(`Can't parse file '${sourceFileStatus}'. Error is ${JSON.stringify(error)}.`);
                     }
                   }
                   catch (error) {
-                    core.error(`Can't parse old core file '${translationCoreFileFullPath}'. Error is ${JSON.stringify(error)}.`);
+                    core.error(`Can't read file '${sourceFileStatus}'`);
                   }
                 }
-                try {
-                  fs.writeFileSync(translationCoreFileFullPath, translationCoreJSON);
-                  addToGitFiles.push(translationSimpleGitPath);
-                  addToGitFiles.push(translationCoreGitPath);
-                  console.log(`Fully formatted core translation file '${translationCoreGitPath}' is created/updated.`);
-                  message += `\t${translationCoreFileStatus} ${translationCoreGitPath}\n`;
-                  updatedLanguages[translationLanguageId] = {
-                    source: translationSimpleFileStatus,
-                    sourceName: translationSimpleGitPath,
-                    core:  translationCoreFileStatus,
-                    coreName: translationCoreGitPath,
-                    changedKeys: changedKeys
-                  };
+            }
+          }
+        }
+        if (Object.keys(foldersToAddToGit).length) {
+          try {
+            let message = `Update of locale files by pattern ${sourceTranslationsPattern}.`;
+            for (const [gitFolderToAdd, currentLanguages] of Object.entries(foldersToAddToGit)) {
+              message += `\n In folder ${gitFolderToAdd} for languages: ${Object.keys(currentLanguages).join(', ')}`;
+              for (const [languageId, currentLanguage] of Object.entries(currentLanguages)) {
+                message += `\n  ${currentLanguage.source === isAdded &&  currentLanguage.core === isAdded ? '+' : '*'} Language '${languageId}':`;
+                message += `\n   Changes in files:`;
+                message += `\n    ${isOpsSymbol[currentLanguage.source.status]} ${currentLanguage.source.path},`;
+                message += `\n    ${isOpsSymbol[currentLanguage.transformed.status]} ${currentLanguage.transformed.path}.`;
+                const changedKeys = currentLanguage.changedKeys;
+                if (changedKeys && Object.keys(changedKeys).length) {
+                  message += `\n   Changes in translation keys:`;
+                  const lastIndex = Object.keys(changedKeys).length - 1;
+                  Object.keys(changedKeys).sort().forEach((key, index) => {
+                    message += `\n    ${isOpsSymbol[changedKeys[key]]} ${key}${index === lastIndex ? '.' : ','}`;
+                  });
                 }
-                catch (error) {
-                  core.error(`Can't write to file '${translationCoreGitPath}'`);
-                }
+                if (! isDryRun) await git.add({ fs, dir, filepath: currentLanguage.source.path });
+                if (! isDryRun) await git.add({ fs, dir, filepath: currentLanguage.transformed.path });
+              }
+            }
+            try {
+              if (isDryRun) {
+                console.log(message);
+                core.setOutput('dry_run_is_successful', 'true');
               }
               else {
-                core.warning(`File '${translationSimpleGitPath}' has no data!`);
+                const commitResult = await git.commit({
+                  fs,
+                  dir,
+                  author: {
+                    name: gitUserName,
+                    email: gitUserMail
+                  },
+                  message
+                });
+                if (commitResult) {
+                  core.notice(`Commit is successfully made.`);
+                  core.setOutput('is_commit_available', 'true');
+                }
               }
             }
             catch (error) {
-              core.error(`Can't parse file '${translationSimpleGitPath}'. Error is ${JSON.stringify(error)}.`);
+              core.error(`Can't make commit. Error is '${error}'.`);
+              core.setFailed(`Can't make commit. Error is '${error}'.`);
             }
           }
           catch (error) {
-            core.error(`Can't read file '${translationSimpleGitPath}'`);
+            core.error(`Can't add files to commit. Error is '${error}'.`);
+            core.setFailed(`Can't add files commit. Error is '${error}'.`);
           }
-        }
-      }
-    }
-    if (addToGitFiles.length) {
-      try {
-        for (const gitFileToAdd of addToGitFiles) {
-          await git.add({ fs, dir, filepath: gitFileToAdd });
-        }
-        try {
-          message = `Update of locale files for languages: ${Object.keys(updatedLanguages).join(', ')}`;
-          Object.keys(updatedLanguages).forEach(languageId => {
-            message += `\n  ${updatedLanguages[languageId].source === isAdded &&  updatedLanguages[languageId].core === isAdded ? '+' : '*'} language '${languageId}':`;
-            message += `\n   Changes in files:`;
-            message += `\n    ${isOpsSymbol[updatedLanguages[languageId].source]} ${updatedLanguages[languageId].sourceName},`;
-            message += `\n    ${isOpsSymbol[updatedLanguages[languageId].core]} ${updatedLanguages[languageId].coreName}.`;
-            const changedKeys = updatedLanguages[languageId].changedKeys;
-            if (changedKeys && Object.keys(changedKeys).length) {
-              message += `\n   Changes in translation keys:`;
-              const lastIndex = Object.keys(changedKeys).length - 1;
-              Object.keys(changedKeys).sort().forEach((key, index) => {
-                message += `\n    ${isOpsSymbol[changedKeys[key]]} ${key}${index === lastIndex ? '.' : ','}`;
-              });
-            }
-          });
-          const commitResult = await git.commit({
-            fs,
-            dir,
-            author: {
-              name: 'github-actions',
-              email: 'github-actions@github.com'
-            },
-            message
-          });
-          if (commitResult) {
-            core.notice(`Commit is successfully made.`);
-            core.setOutput('is_commit_available', 'true');
-          }
-        }
-        catch (error) {
-          core.error(`Can't make commit. Error is '${error}'.`);
-          core.setFailed(`Can't make commit. Error is '${error}'.`);
         }
       }
       catch (error) {
-        core.error(`Can't add file to commit. Error is '${error}'.`);
-        core.setFailed(`Can't add file commit. Error is '${error}'.`);
+        core.error(error.message);
+        core.setFailed(error.message);
       }
+    }
+    catch (error) {
+      core.error(error.message);
+      core.setFailed(error.message);
     }
   }
   catch (error) {
