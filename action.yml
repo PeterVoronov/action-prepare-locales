@@ -2,24 +2,28 @@ name: 'Transform translations for the ATM'
 description: 'Transform a basic translation JSON files to the ATM JSON format.'
 inputs:
   source_translations_pattern:  # id of input
-    description: 'The glob pattern for the source translation files'
+    description: 'The glob pattern for the source translation files.'
     required: true
     default: 'locales/source/core_(??).json'
   transformed_translations_relative_path_and_pattern:  # id of input
-    description: 'The path and pattern for relative results of transform'
+    description: 'The path and pattern for relative results of transform.'
     required: true
-    default: '../locale_$language.json'
+    default: '../locale_$language$.json'
   git_user_name:
-    description: "The user name for commits"
+    description: "The user name for commits."
     required: false
     default: 'github-actions'
   git_user_email:
-    description: "The user email for commits"
+    description: "The user email for commits."
     required: false
     default: 'github-actions@github.com'
+  dry_run:
+    description: "To execute dry run without commit creation."
+    required: false
+    default: 'false'
 outputs:
   is_commit_available: # output will be available to future steps
-    description: 'The indicator of availability the commit after transformation'
+    description: 'The indicator of availability the commit after transformation.'
 runs:
   using: 'node16'
   main: 'dist/index.js'

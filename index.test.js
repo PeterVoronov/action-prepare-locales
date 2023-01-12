@@ -4,7 +4,7 @@ const fs = require('fs');
 const path = require('path');
 
 process.env['INPUT_SOURCE_TRANSLATIONS_PATTERN'] = 'locales/source/core_(??).json';
-process.env['INPUT_TRANSFORMED_TRANSLATIONS_RELATIVE_PATH_AND_PATTERN'] = '../locale_$language.json';
+process.env['INPUT_TRANSFORMED_TRANSLATIONS_RELATIVE_PATH_AND_PATTERN'] = '../locale_$language$.json';
 process.env['INPUT_DRY_RUN'] = 'true';
 const cmd = 'node';
 const args = [path.join(__dirname, 'index.js')];
