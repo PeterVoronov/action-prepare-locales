@@ -29821,7 +29821,7 @@ async function run() {
         let gitUserMail = core.getInput('git_user_mail');
         if (! gitUserMail) gitUserMail = 'github-actions@github.com';
         let isDryRun = core.getInput('dry_run');
-        if (! isDryRun) {
+        if ((! isDryRun) || (isDryRun !== 'true')) {
           isDryRun = false;
         }
         else {
@@ -29845,7 +29845,7 @@ async function run() {
               const
                 translationLanguageId = sourceFileMask[1],
                 transformedFolder = path.join(sourceFolder, transformedTranslationsRelativePath),
-                transformedFileName = transformedTranslationsPattern.replace('$language', translationLanguageId),
+                transformedFileName = transformedTranslationsPattern.replace('$language$', translationLanguageId),
                 transformedFullPath= path.join(transformedFolder, transformedFileName),
                 sourceFileStatus = await git.status({ fs, dir, filepath: sourceFullPath });
                 console.log(`${sourceFullPath} status = ${sourceFileStatus}`);
