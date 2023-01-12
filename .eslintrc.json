@@ -1,5 +1,5 @@
 {
-    
+
     "env": {
         "commonjs": true,
         "es6": true,
@@ -21,6 +21,6 @@
         "brace-style": ["error", "stroustrup", { "allowSingleLine": true }],
         "no-useless-escape": "off",
         "no-prototype-builtins": "off",
-        "strict": ["error", "global"]
+        "no-undef": "error"
     }
 }
